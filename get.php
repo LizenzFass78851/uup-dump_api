@@ -77,7 +77,7 @@ function uupGetFiles(
     }
 
     if($usePack) {
-        $genPack = uupGetGenPacks($build, $info['arch'], $updateId);
+        $genPack = uupApiGetPacks($updateId);
         if(empty($genPack)) return array('error' => 'UNSUPPORTED_COMBINATION');
 
         if(!isset($genPack[$usePack])) {
@@ -395,8 +395,16 @@ function uupGetOnlineFiles($updateId, $rev, $info, $cacheRequests, $type) {
     } else {
         $fetchTime = time();
         consoleLogger('Fetching information from the server...');
-        $postData = composeFileGetRequest($updateId, uupDevice(), $info, $rev, $type);
-        $out = sendWuPostRequest('https://fe3cr.delivery.mp.microsoft.com/ClientWebService/client.asmx/secured', $postData);
+
+        $composerArgs = [$updateId, $info, $rev, $type];
+        $out = sendWuPostRequestHelper('clientSecured', 'composeFileGetRequest', $composerArgs);
+
+        if($out === false || $out['error'] != 200) {
+            consoleLogger('The request has failed');
+            return array('error' => 'WU_REQUEST_FAILED');
+        }
+
+        $out = $out['out'];
         consoleLogger('Information has been successfully fetched.');
     }
 

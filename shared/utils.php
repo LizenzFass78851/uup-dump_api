@@ -51,7 +51,7 @@ function genUUID() {
     );
 }
 
-function sendWuPostRequest($url, $postData) {
+function sendWuPostRequestInternal($url, $postData, $saveCookie = true) {
     $req = curl_init($url);
 
     $proxy = uupDumpApiGetConfig();
@@ -77,38 +77,43 @@ function sendWuPostRequest($url, $postData) {
 
     curl_close($req);
 
-    /*
-    Replace an expired cookie with a new one by replacing it in existing
-    postData. This has to be done this way, because handling it properly would
-    most likely require a rewrite of half of the project.
-    */
-    if($error == 500 && preg_match('/<ErrorCode>(ConfigChanged|CookieExpired)<\/ErrorCode>/', $out)) {
-        $oldCookie = uupEncryptedData();
-        @unlink(dirname(__FILE__).'/cookie.json');
-        $postData = str_replace($oldCookie, uupEncryptedData(), $postData);
+    if($saveCookie === true)
+        uupSaveCookieFromResponse($out);
 
-        return sendWuPostRequest($url, $postData);
+    return [
+        'error' => $error,
+        'out' => $out
+    ];
+}
+
+function sendWuPostRequest($url, $postData) {
+    return sendWuPostRequestInternal($url, $postData)['out'];
+}
+
+function sendWuPostRequestHelper(
+    $endpoint,
+    $postComposer,
+    $postComposerArgs,
+    $saveCookie = true
+) {
+    $endpoints = [
+        'client' => 'https://fe3.delivery.mp.microsoft.com/ClientWebService/client.asmx',
+        'clientSecured' => 'https://fe3cr.delivery.mp.microsoft.com/ClientWebService/client.asmx/secured'
+    ];
+
+    $postData = call_user_func_array($postComposer, $postComposerArgs);
+    if($postData === false)
+        return false;
+
+    $data = sendWuPostRequestInternal($endpoints[$endpoint], $postData, $saveCookie);
+
+    if($data['error'] == 500 && preg_match('/<ErrorCode>(ConfigChanged|CookieExpired|InvalidCookie)<\/ErrorCode>/', $data['out'])) {
+        uupInvalidateCookie();
+        $postData = call_user_func_array($postComposer, $postComposerArgs);
+        return sendWuPostRequestInternal($endpoints[$endpoint], $postData, $saveCookie);
     }
 
-    $outDecoded = html_entity_decode($out);
-    preg_match('/<NewCookie>.*?<\/NewCookie>|<GetCookieResult>.*?<\/GetCookieResult>/', $outDecoded, $cookieData);
-
-    if(!empty($cookieData)) {
-        preg_match('/<Expiration>.*<\/Expiration>/', $cookieData[0], $expirationDate);
-        preg_match('/<EncryptedData>.*<\/EncryptedData>/', $cookieData[0], $encryptedData);
-
-        $expirationDate = preg_replace('/<Expiration>|<\/Expiration>/', '', $expirationDate[0]);
-        $encryptedData = preg_replace('/<EncryptedData>|<\/EncryptedData>/', '', $encryptedData[0]);
-
-        $fileData = array(
-            'expirationDate' => $expirationDate,
-            'encryptedData' => $encryptedData,
-        );
-
-        @file_put_contents(dirname(__FILE__).'/cookie.json', json_encode($fileData));
-    }
-
-    return $out;
+    return $data;
 }
 
 function consoleLogger($message, $showTime = 1) {
@@ -184,4 +189,13 @@ function uupApiConfigIsTrue($config) {
         return false;
 
     return $data[$config] == true;
+}
+
+function getAllowedFlags() {
+    $flags = ['thisonly'];
+
+    if(uupApiConfigIsTrue('allow_corpnet'))
+        $flags[] = 'corpnet';
+
+    return $flags;
 }

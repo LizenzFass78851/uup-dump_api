@@ -202,7 +202,7 @@ function uupGetInfoTexts() {
     );
 }
 
-function uupGetGenPacks($build = 15063, $arch = null, $updateId = null) {
+function uupApiGetPacks($updateId) {
     if(empty($updateId)) return [];
     if(!file_exists('packs/'.$updateId.'.json.gz')) return [];
 
@@ -211,4 +211,8 @@ function uupGetGenPacks($build = 15063, $arch = null, $updateId = null) {
 
     $genPack = json_decode($genPack, 1);
     return $genPack;
+}
+
+function uupGetGenPacks($build = 15063, $arch = null, $updateId = null) {
+    return uupApiGetPacks($updateId);
 }

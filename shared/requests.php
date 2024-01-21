@@ -16,7 +16,7 @@ limitations under the License.
 */
 
 // Composes DeviceAttributes parameter needed to fetch data
-function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type) {
+function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $flags) {
     $branch = branchFromBuild($build);
     $blockUpgrades = 0;
     $flightEnabled = 1;
@@ -50,12 +50,12 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type) {
         $insType = 'FactoryOS';
     }
 
+    $fltBranch = '';
     $fltContent = 'Mainline';
     $fltRing = 'External';
     $flight = 'Active';
 
     if($ring == 'RETAIL') {
-        $fltBranch = '';
         $fltContent = $flight;
         $fltRing = 'Retail';
         $flightEnabled = 0;
@@ -168,17 +168,17 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type) {
         'MediaVersion='.$build,
         'CloudPBR=1',
         'DUScan=1',
-        'OEMModel=Asus ROG Maximus Z690 Extreme',
-        'OEMModelBaseBoard=ROG MAXIMUS Z690 EXTREME',
-        'OEMName_Uncleaned=Contoso Corporation',
+        'OEMModel=21F6CTO1WW',
+        'OEMModelBaseBoard=21F6CTO1WW',
+        'OEMName_Uncleaned=LENOVO',
         'OemPartnerRing=UPSFlighting',
         'OSArchitecture='.$arch,
         'OSSkuId='.$sku,
         'OSUILocale=en-US',
         'OSVersion='.$build,
-        'ProcessorIdentifier=Intel64 Family 6 Model 151 Stepping 2',
+        'ProcessorIdentifier=Intel64 Family 6 Model 186 Stepping 3',
         'ProcessorManufacturer=GenuineIntel',
-        'ProcessorModel=12th Gen Intel(R) Core(TM) i9-12900K',
+        'ProcessorModel=13th Gen Intel(R) Core(TM) i7-1355U',
         'ReleaseType='.$type,
         'SdbVer_20H1=2000000000',
         'SdbVer_19H1=2000000000',
@@ -216,11 +216,11 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type) {
         'WuClientVer='.$build,
     );
 
-    if(uupApiConfigIsTrue('fetch_sync_current_only')) {
+    if(in_array('thisonly', $flags)) {
         $attrib[] = 'MediaBranch='.$branch;
     }
 
-    if($ring == 'MSIT' && uupApiConfigIsTrue('allow_corpnet')) {
+    if(in_array('corpnet', $flags) && uupApiConfigIsTrue('allow_corpnet')) {
         $attrib[] = 'DUInternal=1';
     }
 
@@ -298,7 +298,8 @@ function branchFromBuild($build) {
 }
 
 // Composes POST data for gathering list of urls for download
-function composeFileGetRequest($updateId, $device, $info, $rev = 1, $type = 'Production') {
+function composeFileGetRequest($updateId, $info, $rev = 1, $type = 'Production') {
+    $device = uupDevice();
     $uuid = genUUID();
 
     $createdTime = time();
@@ -310,12 +311,13 @@ function composeFileGetRequest($updateId, $device, $info, $rev = 1, $type = 'Pro
     //$branch = branchFromBuild($info['checkBuild']);
 
     $deviceAttributes = composeDeviceAttributes(
-        $info['flight'],
-        $info['ring'],
-        $info['checkBuild'],
-        $info['arch'],
-        $info['sku'],
-        $type
+        isset($info['flight']) ? $info['flight'] : 'Active',
+        isset($info['ring']) ? $info['ring'] : 'RETAIL',
+        isset($info['checkBuild']) ? $info['checkBuild'] : '10.0.19041.1',
+        isset($info['arch']) ? $info['arch'] : 'amd64',
+        isset($info['sku']) ? $info['sku'] : 48,
+        $type,
+        isset($info['flags']) ? $info['flags'] : [],
     );
 
     return <<<XML
@@ -359,7 +361,12 @@ XML;
 }
 
 // Composes POST data for fetching the latest update information from Windows Update
-function composeFetchUpdRequest($device, $encData, $arch, $flight, $ring, $build, $sku = 48, $type = 'Production') {
+function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type = 'Production', $flags = []) {
+    $encData = uupEncryptedData();
+    if($encData === false)
+        return false;
+
+    $device = uupDevice();
     $uuid = genUUID();
 
     $createdTime = time();
@@ -445,11 +452,11 @@ function composeFetchUpdRequest($device, $encData, $arch, $flight, $ring, $build
         $build,
         $arch,
         $sku,
-        $type
+        $type,
+        $flags
     );
 
-    $syncCurrent = uupApiConfigIsTrue('fetch_sync_current_only');
-    $syncCurrentStr = $syncCurrent ? 'true' : 'false';
+    $syncCurrent = in_array('thisonly', $flags) ? 'true' : 'false';
 
     return <<<XML
 <s:Envelope xmlns:a="http://www.w3.org/2005/08/addressing" xmlns:s="http://www.w3.org/2003/05/soap-envelope">
@@ -572,7 +579,7 @@ function composeFetchUpdRequest($device, $encData, $arch, $flight, $ring, $build
                 </ExtendedUpdateInfoParameters>
                 <ClientPreferredLanguages/>
                 <ProductsParameters>
-                    <SyncCurrentVersionOnly>$syncCurrentStr</SyncCurrentVersionOnly>
+                    <SyncCurrentVersionOnly>$syncCurrent</SyncCurrentVersionOnly>
                     <DeviceAttributes>$deviceAttributes</DeviceAttributes>
                     <CallerAttributes>$callerAttrib</CallerAttributes>
                     <Products>$products</Products>
@@ -585,7 +592,8 @@ XML;
 }
 
 // Composes POST data for Get Cookie request
-function composeGetCookieRequest($device) {
+function composeGetCookieRequest() {
+    $device = uupDevice();
     $uuid = genUUID();
 
     $createdTime = time();
