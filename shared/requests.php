@@ -16,8 +16,10 @@ limitations under the License.
 */
 
 // Composes DeviceAttributes parameter needed to fetch data
-function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $flags) {
-    $branch = branchFromBuild($build);
+function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $flags, $branch) {
+    if($branch == 'auto')
+        $branch = branchFromBuild($build);
+
     $blockUpgrades = 0;
     $flightEnabled = 1;
     $isRetail = 0;
@@ -31,12 +33,14 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
 
     $dvcFamily = 'Windows.Desktop';
     $insType = 'Client';
+    $prodType = 'WinNT';
     if($sku == 119) {
         $dvcFamily = 'Windows.Team';
     }
     if(uupApiIsServer($sku)) {
         $dvcFamily = 'Windows.Server';
         $insType = 'Server';
+        $prodType = 'ServerNT';
         $blockUpgrades = 1;
     }
     /*/ Hololens
@@ -112,7 +116,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
     $attrib = array(
         'App=WU_OS',
         'AppVer='.$build,
-        'AttrDataVer=247',
+        'AttrDataVer=281',
         'AllowInPlaceUpgrade=1',
         'AllowOptionalContent=1',
         'AllowUpgradesWithUnsupportedTPMOrCPU=1',
@@ -120,6 +124,8 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'BranchReadinessLevel=CB',
         'CIOptin=1',
         'CurrentBranch='.$branch,
+        'DataExpDateEpoch_GE24H2='.(time()+82800),
+        'DataExpDateEpoch_GE24H2Setup='.(time()+82800),
         'DataExpDateEpoch_CU23H2='.(time()+82800),
         'DataExpDateEpoch_CU23H2Setup='.(time()+82800),
         'DataExpDateEpoch_NI22H2='.(time()+82800),
@@ -142,13 +148,15 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         //'FlightContent='.$fltContent,
         'FlightRing='.$fltRing,
         'Free=gt64',
+        'GStatus_GE24H2=2',
+        'GStatus_GE24H2Setup=2',
         'GStatus_CU23H2=2',
         'GStatus_CU23H2Setup=2',
+        'GStatus_NI23H2=2',
         'GStatus_NI22H2=2',
         'GStatus_NI22H2Setup=2',
         'GStatus_CO21H2=2',
         'GStatus_CO21H2Setup=2',
-        'GStatus_23H2=2',
         'GStatus_22H2=2',
         'GStatus_21H2=2',
         'GStatus_21H1=2',
@@ -164,6 +172,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'IsDeviceRetailDemo=0',
         'IsFlightingEnabled='.$flightEnabled,
         'IsRetailOS='.$isRetail,
+        'LCUVer=0.0.0.0',
         'MediaBranch=',
         'MediaVersion='.$build,
         'CloudPBR=1',
@@ -179,18 +188,21 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'ProcessorIdentifier=Intel64 Family 6 Model 186 Stepping 3',
         'ProcessorManufacturer=GenuineIntel',
         'ProcessorModel=13th Gen Intel(R) Core(TM) i7-1355U',
+        'ProductType='.$prodType,
         'ReleaseType='.$type,
         'SdbVer_20H1=2000000000',
         'SdbVer_19H1=2000000000',
         'SecureBootCapable=1',
         'TelemetryLevel=3',
+        'TimestampEpochString_GE24H2='.(time()-3600),
+        'TimestampEpochString_GE24H2Setup='.(time()-3600),
         'TimestampEpochString_CU23H2='.(time()-3600),
         'TimestampEpochString_CU23H2Setup='.(time()-3600),
+        'TimestampEpochString_NI23H2='.(time()-3600),
         'TimestampEpochString_NI22H2='.(time()-3600),
         'TimestampEpochString_NI22H2Setup='.(time()-3600),
         'TimestampEpochString_CO21H2='.(time()-3600),
         'TimestampEpochString_CO21H2Setup='.(time()-3600),
-        'TimestampEpochString_23H2='.(time()-3600),
         'TimestampEpochString_22H2='.(time()-3600),
         'TimestampEpochString_21H2='.(time()-3600),
         'TimestampEpochString_21H1='.(time()-3600),
@@ -199,7 +211,10 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'TPMVersion=2',
         'UpdateManagementGroup=2',
         'UpdateOfferedDays=0',
+        'UpgEx_GE24H2Setup=Green',
+        'UpgEx_GE24H2=Green',
         'UpgEx_CU23H2=Green',
+        'UpgEx_NI23H2=Green',
         'UpgEx_NI22H2=Green',
         'UpgEx_CO21H2=Green',
         'UpgEx_23H2=Green',
@@ -212,6 +227,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'UpgradeAccepted=1',
         'UpgradeEligible=1',
         'UserInPlaceUpgrade=1',
+        'VBSState=2',
         'Version_RS5=2000000000',
         'WuClientVer='.$build,
     );
@@ -289,6 +305,10 @@ function branchFromBuild($build) {
             $branch = 'zn_release';
             break;
 
+        case 26100:
+            $branch = 'ge_release';
+            break;
+
         default:
             $branch = 'rs_prerelease';
             break;
@@ -308,16 +328,23 @@ function composeFileGetRequest($updateId, $info, $rev = 1, $type = 'Production')
     $created = gmdate(DATE_W3C, $createdTime);
     $expires = gmdate(DATE_W3C, $expiresTime);
 
-    //$branch = branchFromBuild($info['checkBuild']);
+    $arch = 'amd64';
+
+    if(isset($info['fetchArch'])) {
+        $arch = $info['fetchArch'];
+    } elseif(isset($info['arch'])) {
+        $arch = $info['arch'];
+    }
 
     $deviceAttributes = composeDeviceAttributes(
         isset($info['flight']) ? $info['flight'] : 'Active',
         isset($info['ring']) ? $info['ring'] : 'RETAIL',
         isset($info['checkBuild']) ? $info['checkBuild'] : '10.0.19041.1',
-        isset($info['arch']) ? $info['arch'] : 'amd64',
+        $arch,
         isset($info['sku']) ? $info['sku'] : 48,
         $type,
         isset($info['flags']) ? $info['flags'] : [],
+        isset($info['branch']) ? $info['branch'] : 'auto',
     );
 
     return <<<XML
@@ -361,7 +388,7 @@ XML;
 }
 
 // Composes POST data for fetching the latest update information from Windows Update
-function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type = 'Production', $flags = []) {
+function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type = 'Production', $flags = [], $branch = 'auto') {
     $encData = uupEncryptedData();
     if($encData === false)
         return false;
@@ -377,7 +404,8 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
     $expires = gmdate(DATE_W3C, $expiresTime);
     $cookieExpires = gmdate(DATE_W3C, $cookieExpiresTime);
 
-    $branch = branchFromBuild($build);
+    if($branch == 'auto')
+        $branch = branchFromBuild($build);
 
     $mainProduct = 'Client.OS.rs2';
     if(uupApiIsServer($sku)) {
@@ -399,6 +427,10 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
     if($sku == 189) {
         $mainProduct = 'WCOSDevice0.OS';
     }
+    // WNC
+    if($sku == 210) {
+        $mainProduct = 'WNC.OS';
+    }
 
     if($arch == 'all') {
         $arch = array(
@@ -418,7 +450,7 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
         $products[] = "PN=$mainProduct.$currArch&Branch=$branch&PrimaryOSProduct=1&Repairable=1&V=$build&ReofferUpdate=1";
         $products[] = "PN=Adobe.Flash.$currArch&Repairable=1&V=0.0.0.0";
         $products[] = "PN=Microsoft.Edge.Stable.$currArch&Repairable=1&V=0.0.0.0";
-        $products[] = "PN=Microsoft.NETFX.$currArch&V=2018.12.2.0";
+        $products[] = "PN=Microsoft.NETFX.$currArch&V=0.0.0.0";
         $products[] = "PN=Windows.Autopilot.$currArch&Repairable=1&V=0.0.0.0";
         $products[] = "PN=Windows.AutopilotOOBE.$currArch&Repairable=1&V=0.0.0.0";
         $products[] = "PN=Windows.Appraiser.$currArch&Repairable=1&V=$build";
@@ -453,7 +485,8 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
         $arch,
         $sku,
         $type,
-        $flags
+        $flags,
+        $branch
     );
 
     $syncCurrent = in_array('thisonly', $flags) ? 'true' : 'false';
@@ -538,6 +571,7 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
                     <int>2359977</int>
                     <int>24513870</int>
                     <int>28880263</int>
+                    <int>296374060</int>
                     <int>3</int>
                     <int>30077688</int>
                     <int>30486944</int>

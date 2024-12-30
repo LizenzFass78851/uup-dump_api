@@ -35,42 +35,10 @@ class UupDumpCache {
     }
 
     public function get() {
-        $cacheFile = $this->cacheFile;
-
-        if(!file_exists($cacheFile)) {
-            return false;
-        }
-
-        $cache = @file_get_contents($cacheFile);
-        if($this->isCompressed) $cache = @gzdecode($cache);
-
-        $cache = json_decode($cache, 1);
-
-        $expires = $cache['expires'];
-        $isExpired = ($expires !== false) && (time() > $expires);
-
-        if(empty($cache['content']) || $isExpired) {
-            $this->delete();
-            return false;
-        }
-
-        return $cache['content'];
+        return false;
     }
 
     public function put($content, $validity) {
-        $cacheFile = $this->cacheFile;
-        $expires = $validity ? time() + $validity : false;
-
-        $cache = array(
-            'expires' => $expires,
-            'content' => $content,
-        );
-    
-        if(!file_exists('cache')) mkdir('cache');
-
-        $cacheContent = json_encode($cache)."\n";
-        if($this->isCompressed) $cacheContent = @gzencode($cacheContent);
-
-        @file_put_contents($cacheFile, $cacheContent);
+        return;
     }
 }
