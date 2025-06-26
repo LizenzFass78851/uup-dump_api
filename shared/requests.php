@@ -298,6 +298,7 @@ function branchFromBuild($build) {
 
         case 22621:
         case 22631:
+        case 22635:
             $branch = 'ni_release';
             break;
 
@@ -306,6 +307,8 @@ function branchFromBuild($build) {
             break;
 
         case 26100:
+        case 26120:
+        case 26200:
             $branch = 'ge_release';
             break;
 
