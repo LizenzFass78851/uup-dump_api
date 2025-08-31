@@ -70,6 +70,7 @@ function uupApiPrivateIsAcceptableBranch($branch) {
         'ni_release',
         'zn_release',
         'ge_release',
+        'br_release',
         'ge_prerelease',
         'rs_prerelease',
     ];
