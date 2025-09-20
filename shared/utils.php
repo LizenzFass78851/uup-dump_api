@@ -19,7 +19,7 @@ function uupApiPrintBrand() {
     global $uupApiBrandPrinted;
 
     if(!isset($uupApiBrandPrinted)) {
-        consoleLogger('UUP dump API v'.uupApiVersion());
+        consoleLogger('UUP dump API');
         $uupApiBrandPrinted = 1;
     }
 }

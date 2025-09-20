@@ -16,6 +16,7 @@ limitations under the License.
 */
 
 require_once dirname(__FILE__).'/../listid.php';
+require_once dirname(__FILE__).'/utils.php';
 
 function uupGetInfoTexts() {
     $fancyLangNames = array(
@@ -204,11 +205,19 @@ function uupGetInfoTexts() {
 }
 
 function uupApiGetPacks($updateId) {
-    if(empty($updateId)) return [];
-    if(!file_exists('packs/'.$updateId.'.json.gz')) return [];
+    if(empty($updateId)) 
+        return [];
+
+    if(!uupApiCheckUpdateId($updateId))
+        return [];
+
+    if(!file_exists('packs/'.$updateId.'.json.gz')) 
+        return [];
 
     $genPack = @gzdecode(@file_get_contents('packs/'.$updateId.'.json.gz'));
-    if(empty($genPack)) return [];
+
+    if(empty($genPack)) 
+        return [];
 
     $genPack = json_decode($genPack, 1);
     return $genPack;

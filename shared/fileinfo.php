@@ -31,6 +31,9 @@ function uupApiGetFileinfoDirs() {
 }
 
 function uupApiGetFileinfoName($updateId, $meta = false) {
+    if(!uupApiCheckUpdateId($updateId))
+        return null;
+
     $fileName = $updateId.'.json';
     $dirs = uupApiGetFileinfoDirs();
 
@@ -41,7 +44,12 @@ function uupApiGetFileinfoName($updateId, $meta = false) {
 }
 
 function uupApiFileInfoExists($updateId) {
-    return file_exists(uupApiGetFileinfoName($updateId));
+    $name = uupApiGetFileinfoName($updateId);
+
+    if($name === null)
+        return false;
+
+    return file_exists($name);
 }
 
 function uupApiWriteFileinfoMeta($updateId, $info) {
@@ -49,11 +57,18 @@ function uupApiWriteFileinfoMeta($updateId, $info) {
         unset($info['files']);
 
     $file = uupApiGetFileinfoName($updateId, true);
+
+    if($file === null)
+        return false;
+
     return uupApiWriteJson($file, $info);
 }
 
 function uupApiWriteFileinfo($updateId, $info) {
     $file = uupApiGetFileinfoName($updateId);
+
+    if($file === null)
+        return false;
 
     if(uupApiWriteJson($file, $info) === false)
         return false;
@@ -64,10 +79,14 @@ function uupApiWriteFileinfo($updateId, $info) {
 function uupApiReadFileinfoMeta($updateId) {
     $file = uupApiGetFileinfoName($updateId, true);
 
+    if($file === null)
+        return false;
+
     if(file_exists($file))
         return uupApiReadJson($file);
 
     $info = uupApiReadFileinfo($updateId, false);
+
     if($info === false)
         return false;
 
@@ -88,6 +107,10 @@ function uupApiReadFileinfo($updateId, $meta = false) {
         return uupApiReadFileinfoMeta($updateId);
 
     $file = uupApiGetFileinfoName($updateId);
+
+    if($file === null)
+        return false;
+
     $info = uupApiReadJson($file);
 
     return $info;
