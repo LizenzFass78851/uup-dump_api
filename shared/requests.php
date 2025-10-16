@@ -116,7 +116,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
     $attrib = array(
         'App=WU_OS',
         'AppVer='.$build,
-        'AttrDataVer=281',
+        'AttrDataVer=331',
         'AllowInPlaceUpgrade=1',
         'AllowOptionalContent=1',
         'AllowUpgradesWithUnsupportedTPMOrCPU=1',
@@ -232,6 +232,11 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'UserInPlaceUpgrade=1',
         'VBSState=2',
         'Version_RS5=2000000000',
+        'Win10CommercialAzureESUEligible=1',
+        'Win10CommercialKeybasedESUEligible=1',
+        'Win10CommercialW365ESUEligible=1',
+        'Win10ConsumerESUStatus=3',
+        'Win10ConsumerESUAY=9',
         'WuClientVer='.$build,
     );
 
