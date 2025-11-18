@@ -329,8 +329,9 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
         $updateTitle = preg_replace('/ for .{3,5}-based/i', ' for', $updateTitle);
 
     $isCumulativeUpdate = 0;
-    if(preg_match('/\d{4}-\d{2}.+Update|Cumulative Update|Microsoft Edge|Windows Feature Experience Pack|Cumulative security Hotpatch/i', $updateTitle)) {
+    if(preg_match('/\d{4}-\d{2}.+Update|(Cumulative|Security|Preview) Update|Microsoft Edge|Windows Feature Experience Pack|Cumulative security Hotpatch/i', $updateTitle)) {
         $isCumulativeUpdate = 1;
+
         if($isNet) {
             $updateTitle = preg_replace("/3.5 and 4.8.1 |3.5 and 4.8 | for $foundArch| for x64| \(KB.*?\)/i", '', $updateTitle);
         } else {
@@ -343,6 +344,9 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
     if($foundType == 'server') {
         $updateTitle = str_replace('Windows 10', 'Windows Server', $updateTitle);
         $updateTitle = str_replace('Windows 11', 'Windows Server', $updateTitle);
+
+        if(preg_match('/Server|Azure Stack HCI/i', $updateTitle) !== 1)
+            $updateTitle = str_replace('Update', 'Update for Microsoft server operating system', $updateTitle);
     }
 
     if($sku == 406)
