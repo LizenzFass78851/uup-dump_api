@@ -344,9 +344,11 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
     if($foundType == 'server') {
         $updateTitle = str_replace('Windows 10', 'Windows Server', $updateTitle);
         $updateTitle = str_replace('Windows 11', 'Windows Server', $updateTitle);
+    }
 
-        if(preg_match('/Server|Azure Stack HCI/i', $updateTitle) !== 1)
-            $updateTitle = str_replace('Update', 'Update for Microsoft server operating system', $updateTitle);
+    if(preg_match('/Windows 1\d|Server|Azure Stack HCI/i', $updateTitle) !== 1) {
+        $osName = $foundType != 'server' ? 'Windows 11' : 'Microsoft server operating system';
+        $updateTitle = str_replace('Update', "Update for $osName", $updateTitle);
     }
 
     if($sku == 406)

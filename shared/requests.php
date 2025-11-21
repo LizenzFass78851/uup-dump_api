@@ -320,6 +320,10 @@ function branchFromBuild($build) {
             $branch = 'ge_release';
             break;
 
+        case 28000:
+            $branch = 'br_release';
+            break;
+
         default:
             $branch = 'rs_prerelease';
             break;
