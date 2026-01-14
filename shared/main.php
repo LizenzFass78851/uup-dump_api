@@ -16,7 +16,7 @@ limitations under the License.
 */
 
 function uupApiVersion() {
-    return "I can't be bothered to update the version; use commit hash.";
+    return '22e344bdf2-dev';
 }
 
 require_once dirname(__FILE__).'/auths.php';
