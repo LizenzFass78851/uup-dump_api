@@ -34,20 +34,31 @@ function uupApiPrivateParseFlags($str) {
 }
 
 function uupApiPrivateGetLatestBuild() {
-    $builds = array('22000.1');
-
     $ids = uupListIds();
-    if(isset($ids['error'])) {
-        $ids['builds'] = array();
+
+    if(!isset($ids['builds']) || empty($ids['builds'])) {
+        return '26100.1';
     }
 
-    if(empty($ids['builds'])) {
-        $build = $builds[0];
-    } else {
-        $build = $ids['builds'][0]['build'];
+    return $ids['builds'][0]['build'];
+}
+
+function uupApiPrivateGetLatestPatch($build) {
+    $ids = uupListIds();
+
+    if(!isset($ids['builds']) || empty($ids['builds'])) {
+        return 0;
     }
 
-    return $build;
+    foreach($ids['builds'] as $val) {
+        $valBuild = explode('.', $val['build']);
+
+        if($valBuild[0] == $build && isset($valBuild[1])) {
+            return intval($valBuild[1]);
+        }
+    }
+
+    return 0;
 }
 
 function uupApiPrivateIsAcceptableBranch($branch) {
@@ -83,7 +94,7 @@ function uupApiPrivateNormalizeFetchParams($params) {
         'arch' => 'amd64',
         'ring' => 'WIF',
         'flight' => 'Active',
-        'branch' => 'ge_release',
+        'branch' => 'auto',
         'build' => 'latest',
         'minor' => 0,
         'sku' => 48,
@@ -154,8 +165,14 @@ function uupFetchUpd2($params, $cacheRequests = 0) {
     }
 
     $build = explode('.', $build);
-    if(isset($build[1])) $minor = intval($build[1]);
+    if(isset($build[1])) $minor = $build[1];
     $build = intval($build[0]);
+
+    if($minor == 'latest') {
+        $minor = uupApiPrivateGetLatestPatch($build);
+    } else {
+        $minor = intval($minor);
+    }
 
     if(!($arch == 'amd64' || $arch == 'x86' || $arch == 'arm64' || $arch == 'arm' || $arch == 'all')) {
         return array('error' => 'UNKNOWN_ARCH');
@@ -346,7 +363,7 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
         $updateTitle = str_replace('Windows 11', 'Windows Server', $updateTitle);
     }
 
-    if(preg_match('/Windows 1\d|Server|Azure Stack HCI/i', $updateTitle) !== 1) {
+    if(preg_match('/Windows 1\d|Server|Azure Stack HCI|Windows CPC OS/i', $updateTitle) !== 1) {
         $osName = $foundType != 'server' ? 'Windows 11' : 'Microsoft server operating system';
         $updateTitle = str_replace('Update', "Update for $osName", $updateTitle);
     }
@@ -360,7 +377,7 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
     if($foundType == 'hololens' || $foundType == 'wcosdevice0')
         $updateTitle = $updateTitle.' - '.$type;
 
-    if(!preg_match("/$foundBuild/i", $updateTitle))
+    if(!str_contains($updateTitle, $foundBuild))
         $updateTitle = $updateTitle.' ('.$foundBuild.')';
 
     preg_match('/UpdateID=".*?"/', $updateInfo, $updateId);
