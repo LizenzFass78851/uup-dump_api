@@ -301,32 +301,40 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
         return array('error' => 'EMPTY_FILELIST');
     }
 
-    preg_match('/ProductReleaseInstalled Name\="(.*?)\..*\.(.*?)" Version\="10\.0\.(.*?)"/', $updateInfo, $info);
-    $foundType = @strtolower($info[1]);
-    $foundArch = @strtolower($info[2]);
-    $foundBuild = @$info[3];
+    preg_match('/ProductReleaseInstalled Name\="(.*?)" Version\="(.*?)"/', $updateInfo, $info);
+    if(!isset($info[0]) || empty($info[0])) {
+        $infoExt = preg_grep('/<ExtendedProperties .*?>/', $updateMeta);
+        preg_match('/ProductName\="(.*?)" ReleaseVersion\="(.*?)"/', $infoExt[0], $info);
+    }
+    $matchName = @strtolower($info[1]);
+    $matchVersion = @$info[2];
 
-    if(!isset($foundArch) || empty($foundArch)) {
-        preg_match('/ProductReleaseInstalled Name\="(.*?)\.(.*?)" Version\="10\.0\.(.*?)"/', $updateInfo, $info);
-        $foundType = @strtolower($info[1]);
-        $foundArch = @strtolower($info[2]);
-        $foundBuild = @$info[3];
+    if($matchVersion == '1.0.0.0' || $matchVersion == '10.0.0.0') {
+        preg_match('/"BuildFlightVersion":"(.*?)"/', $updateInfo, $infoVer);
+        $matchVersion = @$infoVer[1];
     }
 
-    if(!isset($foundArch) || empty($foundArch)) {
-        preg_match('/ProductReleaseInstalled Name\="(.*?)\.(.*?)" Version\="(.*?)"/', $updateInfo, $info);
-        $foundType = @strtolower($info[1]);
-        $foundArch = @strtolower($info[2]);
-        $foundBuild = @$info[3];
-    }
+    $arrayName = explode('.', $matchName);
+    $arrayVersion = explode('.', $matchVersion);
+
+    $foundArch = $arrayName[count($arrayName)-1];
+    $foundType = $arrayName[0];
+    if($foundType == 'windows' || $foundType == 'microsoft')
+        $foundType = $arrayName[1];
 
     $isNet = 0;
-    if(strpos($foundArch, 'netfx') !== false) {
+    if(strpos($matchVersion, '10.0.') !== false) {
+        $foundBuild = $arrayVersion[2].'.'.$arrayVersion[3];
+    } elseif($foundType == 'netfx') {
+        $foundBuild = $arrayVersion[1].'.'.$arrayVersion[2];
         $isNet = 1;
-        preg_match('/ProductReleaseInstalled Name\=".*\.(.*?)\.(.*?)" Version\=".*\.\d{5}\.(.*?)"/', $updateInfo, $info);
-        $foundType = @strtolower($info[1]);
-        $foundArch = @strtolower($info[2]);
-        $foundBuild = @$info[3];
+    } else {
+        $foundBuild = $matchVersion;
+    }
+
+    $addKB = 0;
+    if($isNet || $foundType == 'oobe') {
+        $addKB = 1;
     }
 
     $updateTitle = preg_grep('/<Title>.*<\/Title>/', $updateMeta);
@@ -344,6 +352,8 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
 
     if($foundType == 'hololens' || $foundType == 'wcosdevice0')
         $updateTitle = preg_replace('/ for .{3,5}-based/i', ' for', $updateTitle);
+
+    preg_match('/\((KB.*?)\)/', $updateTitle, $updateKB);
 
     $isCumulativeUpdate = 0;
     if(preg_match('/\d{4}-\d{2}.+Update|(Cumulative|Security|Preview) Update|Microsoft Edge|Windows Feature Experience Pack|Cumulative security Hotpatch/i', $updateTitle)) {
@@ -368,6 +378,10 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
         $updateTitle = str_replace('Update', "Update for $osName", $updateTitle);
     }
 
+    if($foundType == 'oobe' && !preg_match("/OOBE|Out of Box/i", $updateTitle)) {
+        $updateTitle = str_replace('Update', 'OOBE Update', $updateTitle);
+    }
+
     if($sku == 406)
         $updateTitle = str_replace('Microsoft server operating system', 'Azure Stack HCI', $updateTitle);
 
@@ -376,6 +390,9 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
 
     if($foundType == 'hololens' || $foundType == 'wcosdevice0')
         $updateTitle = $updateTitle.' - '.$type;
+
+    if($addKB && isset($updateKB[0]))
+        $updateTitle = $updateTitle.' - '.$updateKB[1];
 
     if(!str_contains($updateTitle, $foundBuild))
         $updateTitle = $updateTitle.' ('.$foundBuild.')';

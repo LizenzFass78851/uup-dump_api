@@ -116,7 +116,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
     $attrib = array(
         'App=WU_OS',
         'AppVer='.$build,
-        'AttrDataVer=331',
+        'AttrDataVer=352',
         'AllowInPlaceUpgrade=1',
         'AllowOptionalContent=1',
         'AllowUpgradesWithUnsupportedTPMOrCPU=1',
@@ -174,6 +174,7 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'IsDeviceRetailDemo=0',
         'IsFlightingEnabled='.$flightEnabled,
         'IsRetailOS='.$isRetail,
+        'LaunchUserOOBE=1',
         'LCUVer=0.0.0.0',
         'MediaBranch=',
         'MediaVersion='.$build,
@@ -317,10 +318,12 @@ function branchFromBuild($build) {
         case 26100:
         case 26120:
         case 26200:
+        case 26300:
             $branch = 'ge_release';
             break;
 
         case 28000:
+        case 28100:
             $branch = 'br_release';
             break;
 
@@ -474,6 +477,8 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
         $products[] = "PN=Windows.FeatureExperiencePack.$currArch&Repairable=1&V=0.0.0.0";
         $products[] = "PN=Windows.ManagementOOBE.$currArch&IsWindowsManagementOOBE=1&Repairable=1&V=$build";
         $products[] = "PN=Windows.OOBE.$currArch&IsWindowsOOBE=1&Repairable=1&V=$build";
+        $products[] = "PN=Windows.OOBE.Cumulative.$currArch&V=0.0.0.0";
+        $products[] = "PN=Windows.OOBE.Standalone.$currArch&V=0.0.0.0";
         $products[] = "PN=Windows.UpdateStackPackage.$currArch&Name=Update Stack Package&Repairable=1&V=$build";
         $products[] = "PN=Hammer.$currArch&Source=UpdateOrchestrator&V=0.0.0.0";
         $products[] = "PN=MSRT.$currArch&Source=UpdateOrchestrator&V=0.0.0.0";
@@ -590,6 +595,13 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
                     <int>3</int>
                     <int>30077688</int>
                     <int>30486944</int>
+                    <int>316003061</int>
+                    <int>326686062</int>
+                    <int>326686063</int>
+                    <int>327065581</int>
+                    <int>327072300</int>
+                    <int>327072305</int>
+                    <int>327100345</int>
                     <int>5143990</int>
                     <int>5169043</int>
                     <int>5169044</int>
