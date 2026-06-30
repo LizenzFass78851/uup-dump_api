@@ -27,19 +27,8 @@ function uupApiPrivateInvalidateFileinfoCache() {
     $cache2->delete();
 }
 
-function uupApiPrivateGetFromFileinfo($sortByDate = 0) {
-    $dirs = uupApiGetFileinfoDirs();
-    $fileinfo = $dirs['fileinfoData'];
-    $fileinfoRoot = $dirs['fileinfo'];
-
-    $files = scandir($fileinfo);
-    $files = preg_grep('/\.json$/', $files);
-
-    consoleLogger('Parsing database info...');
-
-    $cacheFile = $fileinfoRoot.'/cache.json';
+function uupApiGetFileInfoCache($cacheFile) {
     $cacheV2Version = 1;
-
     $database = uupApiReadJson($cacheFile);
 
     if(isset($database['version'])) {
@@ -54,88 +43,98 @@ function uupApiPrivateGetFromFileinfo($sortByDate = 0) {
         $database = array();
     }
 
-    if(empty($database)) $database = array();
+    if(empty($database))
+        $database = [];
 
-    $newDb = array();
-    $builds = array();
+    return $database;
+}
+
+function uupApiPrivateGetCachedBuild(&$cache, $uuid) {
+    if(!isset($cache[$uuid])) {
+        $info = uupApiReadFileinfoMeta($uuid);
+        $data = [
+            'title' => isset($info['title']) ? $info['title'] : 'UNKNOWN',
+            'build' => isset($info['build']) ? $info['build'] : 'UNKNOWN',
+            'arch' => isset($info['arch']) ? $info['arch'] : 'UNKNOWN',
+            'created' => isset($info['created']) ? $info['created'] : null,
+        ];
+
+        $cache[$uuid] = $data;
+    } else {
+        $data = $cache[$uuid];
+    }
+
+    $data['uuid'] = $uuid;
+    return $data;
+}
+
+function uupApiPrivateGetSortTag($data, $sortByDate) {
+    $tmp = explode('.', $data['build']);
+
+    if($sortByDate) {
+        $tag = PHP_INT_MAX - intval($data['created']);
+    } else {
+        $tag = '';
+    }
+
+    $tag .= intval(uupApiIsUpdateLowPriority($data['title']));
+
+    if(isset($tmp[1])) {
+        $tag .= str_pad(999999999 - $tmp[0], 10, '0', STR_PAD_LEFT);
+        $tag .= str_pad(999999999 - $tmp[1], 10, '0', STR_PAD_LEFT);
+    }
+
+    $tag .= $data['arch'] . $data['title'] . $data['uuid'];
+
+    return $tag;
+}
+
+function uupApiPrivateGetFromFileinfo($sortByDate = 0) {
+    $dirs = uupApiGetFileinfoDirs();
+    $fileinfo = $dirs['fileinfoData'];
+    $fileinfoRoot = $dirs['fileinfo'];
+
+    $files = scandir($fileinfo);
+    $files = preg_grep('/\.json$/', $files);
+
+    consoleLogger('Parsing database info...');
+
+    $cacheFile = $fileinfoRoot.'/cache.json';
+    $cacheV2Version = 1;
+
+    $database = uupApiGetFileInfoCache($cacheFile);
+    $oldDb = $database;
+
     foreach($files as $file) {
         if($file == '.' || $file == '..')
             continue;
 
         $uuid = preg_replace('/\.json$/', '', $file);
 
-        if(!isset($database[$uuid])) {
-            $info = uupApiReadFileinfoMeta($uuid);
+        $data = uupApiPrivateGetCachedBuild($database, $uuid);
+        $tag = uupApiPrivateGetSortTag($data, $sortByDate);
 
-            $title = isset($info['title']) ? $info['title'] : 'UNKNOWN';
-            $build = isset($info['build']) ? $info['build'] : 'UNKNOWN';
-            $arch = isset($info['arch']) ? $info['arch'] : 'UNKNOWN';
-            $created = isset($info['created']) ? $info['created'] : null;
-
-            $temp = array(
-                'title' => $title,
-                'build' => $build,
-                'arch' => $arch,
-                'created' => $created,
-            );
-
-            $newDb[$uuid] = $temp;
-        } else {
-            $title = $database[$uuid]['title'];
-            $build = $database[$uuid]['build'];
-            $arch = $database[$uuid]['arch'];
-            $created = $database[$uuid]['created'];
-
-            $newDb[$uuid] = $database[$uuid];
-        }
-
-        $temp = array(
-            'title' => $title,
-            'build' => $build,
-            'arch' => $arch,
-            'created' => $created,
-            'uuid' => $uuid,
-        );
-
-        $tmp = explode('.', $build);
-        if(isset($tmp[1])) {
-            $tmp[0] = str_pad($tmp[0], 10, '0', STR_PAD_LEFT);
-            $tmp[1] = str_pad($tmp[1], 10, '0', STR_PAD_LEFT);
-            $tmp = $tmp[0].$tmp[1];
-        } else {
-            consoleLogger($uuid.'.json appears to be broken and may be useless.');
-            $tmp = 0;
-        }
-
-        if($sortByDate) {
-            $tmp = $created.$tmp;
-        }
-
-        $buildAssoc[$tmp][] = $arch.$title.$uuid;
-        $builds[$tmp.$arch.$title.$uuid] = $temp;
+        $buildAssoc[$tag] = $uuid;
     }
 
-    if(empty($buildAssoc)) return [];
+    if(empty($buildAssoc)) 
+        return [];
 
-    krsort($buildAssoc);
-    $buildsNew = array();
+    ksort($buildAssoc);
 
-    foreach($buildAssoc as $key => $val) {
-        sort($val);
-        foreach($val as $id) {
-            $buildsNew[] = $builds[$key.$id];
-        }
+    $builds = [];
+    foreach($buildAssoc as $val) {
+        $builds[] = uupApiPrivateGetCachedBuild($database, $val);
     }
 
-    $builds = $buildsNew;
     consoleLogger('Done parsing database info.');
 
-    if($newDb != $database) {
+    if($database != $oldDb) {
         if(!file_exists('cache')) mkdir('cache');
 
         $cacheData = array(
             'version' => $cacheV2Version,
-            'database' => $newDb,
+            'database' => $database,
         );
 
         $success = @file_put_contents(

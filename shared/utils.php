@@ -207,3 +207,18 @@ function getAllowedFlags() {
 function uupAreAppxPresent($genPack) {
     return isset($genPack['neutral']['APP']);
 }
+
+function uupApiIsUpdateLowPriority($title) {
+    $titles = [
+        'Update Stack Package',
+        '.NET Framework',
+        'OOBE'
+    ];
+
+    foreach($titles as $val) {
+        if(str_contains($title, $val) == true)
+            return true;
+    }
+
+    return false;
+}
