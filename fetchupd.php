@@ -33,6 +33,15 @@ function uupApiPrivateParseFlags($str) {
     return [$split[0], $flagsSafe];
 }
 
+function uupApiPrivateParseRing($str) {
+    $split = explode(':', $str);
+    if(!isset($split[1])) {
+        return [$split[0], -1];
+    }
+
+    return $split;
+}
+
 function uupApiPrivateGetLatestBuild() {
     $ids = uupListIds();
 
@@ -100,6 +109,7 @@ function uupApiPrivateNormalizeFetchParams($params) {
         'sku' => 48,
         'type' => 'Production',
         'flags' => [],
+        'targetRelease' => -1,
     ], $params);
 
     if(!is_array($np['flags'])) $np['flags'] = [];
@@ -113,6 +123,7 @@ function uupApiPrivateNormalizeFetchParams($params) {
     $np['sku'] = intval($np['sku']);
     $np['type'] = ucwords(strtolower($np['type']));
     $np['flags'] = array_map('strtolower', $np['flags']);
+    $np['targetRelease'] = intval($np['targetRelease']);
 
     return $np;
 }
@@ -128,6 +139,7 @@ function uupFetchUpd(
     $cacheRequests = 0
 ) {
     [$build, $flags] = uupApiPrivateParseFlags($build);
+    [$ring, $targetRelease] = uupApiPrivateParseRing($ring);
 
     $params = [
         'arch' => $arch,
@@ -138,6 +150,7 @@ function uupFetchUpd(
         'sku' => $sku,
         'type' => $type,
         'flags' => $flags,
+        'targetRelease' => $targetRelease,
     ];
 
     return uupFetchUpd2($params, $cacheRequests);
@@ -157,6 +170,7 @@ function uupFetchUpd2($params, $cacheRequests = 0) {
     $sku = $np['sku'];
     $type = $np['type'];
     $flags = $np['flags'];
+    $targetRelease = $np['targetRelease'];
 
     $flagsStr = implode(',', $flags);
 
@@ -214,13 +228,13 @@ function uupFetchUpd2($params, $cacheRequests = 0) {
         $type = 'Production';
     }
 
-    $res = "api-fetch-$arch-$ring-$flight-$branch-$build-$flagsStr-$minor-$sku-$type";
+    $res = "api-fetch-$arch-$ring-$flight-$branch-$build-$flagsStr-$minor-$sku-$type-$targetRelease";
     $cache = new UupDumpCache($res);
     $fromCache = $cache->get();
     if($fromCache !== false) return $fromCache;
 
     consoleLogger('Fetching information from the server...');
-    $composerArgs = [$arch, $flight, $ring, $build, $sku, $type, $flags, $branch];
+    $composerArgs = [$arch, $flight, $ring, $build, $sku, $type, $flags, $branch, $targetRelease];
     $out = sendWuPostRequestHelper('client', 'composeFetchUpdRequest', $composerArgs);
     if($out === false || $out['error'] != 200) {
         consoleLogger('The request has failed');
@@ -248,7 +262,7 @@ function uupFetchUpd2($params, $cacheRequests = 0) {
         $num++;
         consoleLogger("Checking build information for update {$num} of {$updatesNum}...");
 
-        $info = parseFetchUpdate($val, $out, $arch, $ring, $flight, $build, $sku, $type, $flags, $branch);
+        $info = parseFetchUpdate($val, $out, $arch, $ring, $flight, $build, $sku, $type, $flags, $branch, $targetRelease);
         if(isset($info['error'])) {
             $errorCount++;
             continue;
@@ -278,7 +292,7 @@ function uupFetchUpd2($params, $cacheRequests = 0) {
     return $data;
 }
 
-function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku, $type, $flags, $branch) {
+function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku, $type, $flags, $branch, $targetRelease) {
     $updateNumId = preg_replace('/<UpdateInfo><ID>|<\/ID>.*/i', '', $updateInfo);
 
     $updates = preg_replace('/<Update>/', "\n<Update>", $out);
@@ -493,6 +507,7 @@ function parseFetchUpdate($updateInfo, $out, $arch, $ring, $flight, $build, $sku
         $temp['ring'] = $ring;
         $temp['flight'] = $flight;
         $temp['branch'] = $branch;
+        $temp['targetRelease'] = $targetRelease;
         $temp['arch'] = $foundArch;
         $temp['fetchArch'] = $arch == 'all' ? 'amd64' : $arch;
         $temp['build'] = $foundBuild;

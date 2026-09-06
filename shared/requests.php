@@ -16,7 +16,7 @@ limitations under the License.
 */
 
 // Composes DeviceAttributes parameter needed to fetch data
-function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $flags, $branch) {
+function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $flags, $branch, $targetRelease) {
     if($branch == 'auto')
         $branch = branchFromBuild($build);
 
@@ -241,6 +241,11 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'WuClientVer='.$build,
     );
 
+    if($bldnum >= 26100) {
+        $attrib[] = 'FlightUpgradeTarget='.$targetRelease;
+        $attrib[] = 'IsFutureKeyEnabled=1';
+    }
+
     if(in_array('thisonly', $flags)) {
         $attrib[] = 'MediaBranch='.$branch;
     }
@@ -363,6 +368,7 @@ function composeFileGetRequest($updateId, $info, $rev = 1, $type = 'Production')
         $type,
         isset($info['flags']) ? $info['flags'] : [],
         isset($info['branch']) ? $info['branch'] : 'auto',
+        isset($info['targetRelease']) ? $info['targetRelease'] : -1
     );
 
     return <<<XML
@@ -406,7 +412,7 @@ XML;
 }
 
 // Composes POST data for fetching the latest update information from Windows Update
-function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type = 'Production', $flags = [], $branch = 'auto') {
+function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type = 'Production', $flags = [], $branch = 'auto', $targetRelease = -1) {
     $encData = uupEncryptedData();
     if($encData === false)
         return false;
@@ -506,7 +512,8 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
         $sku,
         $type,
         $flags,
-        $branch
+        $branch,
+        $targetRelease
     );
 
     $syncCurrent = in_array('thisonly', $flags) ? 'true' : 'false';
