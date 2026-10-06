@@ -116,29 +116,31 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
     $attrib = array(
         'App=WU_OS',
         'AppVer='.$build,
-        'AttrDataVer=352',
+        'AttrDataVer=370',
         'AllowInPlaceUpgrade=1',
         'AllowOptionalContent=1',
         'AllowUpgradesWithUnsupportedTPMOrCPU=1',
+        'AllowWindowsServerFeatureUpdate=1',
         'BlockFeatureUpdates='.$blockUpgrades,
         'BranchReadinessLevel=CB',
         'CIOptin=1',
         'CurrentBranch='.$branch,
+        'DataExpDateEpoch_GE26H2='.(time()+82800),
         'DataExpDateEpoch_GE25H2='.(time()+82800),
         'DataExpDateEpoch_GE24H2='.(time()+82800),
         'DataExpDateEpoch_GE24H2Setup='.(time()+82800),
-        'DataExpDateEpoch_CU23H2='.(time()+82800),
-        'DataExpDateEpoch_CU23H2Setup='.(time()+82800),
+        'DataExpDateEpoch_NI23H2='.(time()+82800),
         'DataExpDateEpoch_NI22H2='.(time()+82800),
         'DataExpDateEpoch_NI22H2Setup='.(time()+82800),
         'DataExpDateEpoch_CO21H2='.(time()+82800),
         'DataExpDateEpoch_CO21H2Setup='.(time()+82800),
-        'DataExpDateEpoch_23H2='.(time()+82800),
         'DataExpDateEpoch_22H2='.(time()+82800),
         'DataExpDateEpoch_21H2='.(time()+82800),
         'DataExpDateEpoch_21H1='.(time()+82800),
         'DataExpDateEpoch_20H1='.(time()+82800),
+        'DataExpDateEpoch_20H1Setup='.(time()+82800),
         'DataExpDateEpoch_19H1='.(time()+82800),
+        'DataExpDateEpoch_19H1Setup='.(time()+82800),
         'DataVer_RS5=2000000000',
         'DefaultUserRegion=191',
         'DeviceFamily='.$dvcFamily,
@@ -149,11 +151,10 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         //'FlightContent='.$fltContent,
         'FlightRing='.$fltRing,
         'Free=gt64',
+        'GStatus_GE26H2=2',
         'GStatus_GE25H2=2',
         'GStatus_GE24H2=2',
         'GStatus_GE24H2Setup=2',
-        'GStatus_CU23H2=2',
-        'GStatus_CU23H2Setup=2',
         'GStatus_NI23H2=2',
         'GStatus_NI22H2=2',
         'GStatus_NI22H2Setup=2',
@@ -193,14 +194,17 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'ProcessorModel=13th Gen Intel(R) Core(TM) i7-1355U',
         'ProductType='.$prodType,
         'ReleaseType='.$type,
+        'SdbVer_GE24H2=2000000000',
+        'SdbVer_NI22H2=2000000000',
+        'SdbVer_CO21H2=2000000000',
         'SdbVer_20H1=2000000000',
         'SdbVer_19H1=2000000000',
         'SecureBootCapable=1',
         'TelemetryLevel=3',
+        'TimestampEpochString_GE26H2='.(time()-3600),
+        'TimestampEpochString_GE25H2='.(time()-3600),
         'TimestampEpochString_GE24H2='.(time()-3600),
         'TimestampEpochString_GE24H2Setup='.(time()-3600),
-        'TimestampEpochString_CU23H2='.(time()-3600),
-        'TimestampEpochString_CU23H2Setup='.(time()-3600),
         'TimestampEpochString_NI23H2='.(time()-3600),
         'TimestampEpochString_NI22H2='.(time()-3600),
         'TimestampEpochString_NI22H2Setup='.(time()-3600),
@@ -210,17 +214,21 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'TimestampEpochString_21H2='.(time()-3600),
         'TimestampEpochString_21H1='.(time()-3600),
         'TimestampEpochString_20H1='.(time()-3600),
+        'TimestampEpochString_20H1Setup='.(time()-3600),
         'TimestampEpochString_19H1='.(time()-3600),
+        'TimestampEpochString_19H1Setup='.(time()-3600),
         'TPMVersion=2',
         'UpdateManagementGroup=2',
         'UpdateOfferedDays=0',
+        'UpgEx_GE26H2=Green',
         'UpgEx_GE25H2=Green',
         'UpgEx_GE24H2Setup=Green',
         'UpgEx_GE24H2=Green',
-        'UpgEx_CU23H2=Green',
         'UpgEx_NI23H2=Green',
         'UpgEx_NI22H2=Green',
+        'UpgEx_NI22H2Setup=Green',
         'UpgEx_CO21H2=Green',
+        'UpgEx_CO21H2Setup=Green',
         'UpgEx_23H2=Green',
         'UpgEx_22H2=Green',
         'UpgEx_21H2=Green',
@@ -234,10 +242,10 @@ function composeDeviceAttributes($flight, $ring, $build, $arch, $sku, $type, $fl
         'VBSState=2',
         'Version_RS5=2000000000',
         'Win10CommercialAzureESUEligible=1',
-        'Win10CommercialKeybasedESUEligible=1',
+        'Win10CommercialKeybasedESUEligible=2',
         'Win10CommercialW365ESUEligible=1',
         'Win10ConsumerESUStatus=3',
-        'Win10ConsumerESUAY=9',
+        'Win10ConsumerESUAY=10',
         'WuClientVer='.$build,
     );
 
@@ -293,7 +301,6 @@ function branchFromBuild($build) {
         case 19043:
         case 19044:
         case 19045:
-        case 19046:
             $branch = 'vb_release';
             break;
 
@@ -312,7 +319,6 @@ function branchFromBuild($build) {
 
         case 22621:
         case 22631:
-        case 22635:
             $branch = 'ni_release';
             break;
 
@@ -321,7 +327,6 @@ function branchFromBuild($build) {
             break;
 
         case 26100:
-        case 26120:
         case 26200:
         case 26300:
             $branch = 'ge_release';
@@ -608,7 +613,7 @@ function composeFetchUpdRequest($arch, $flight, $ring, $build, $sku = 48, $type 
                     <int>327065581</int>
                     <int>327072300</int>
                     <int>327072305</int>
-                    <int>327100345</int>
+                    <int>333703234</int>
                     <int>5143990</int>
                     <int>5169043</int>
                     <int>5169044</int>
